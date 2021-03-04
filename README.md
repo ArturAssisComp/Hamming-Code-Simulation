@@ -1,0 +1,2 @@
+# Hamming-Code-Simulation
+This repository contains a simple simulation of the Hamming code for error correction in telecommunications. The simulation consists of creating a vector with N bits of information, simulating the transmission of those bits through a binary symmetric channel (BSC) using Hamming code to handle the errors.  The parameter p gives the probability of error on the transmission of each bit. 
