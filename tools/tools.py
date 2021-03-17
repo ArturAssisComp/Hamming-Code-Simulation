@@ -91,7 +91,7 @@ def _get_nth_word(array, nth, word_size=4, extra_bits=3):
     i0 = (word_size + extra_bits)*nth
     return array[i0 : i0 + word_size]
 
-def _store_nth_word(bit_word, array, nth, size=3, offset=4):
+def _store_nth_word(bit_word, array, nth, size=4, offset=0):
     '''
     Description: This function copies the bits from 'bit_word' to the respective bits
     of array, starting at index nth * (size + offset) + offset and finishing at 
@@ -199,7 +199,7 @@ def encoder(information_words):
         information_word = _get_nth_word(information_words, i)
         extra_bits       = information_word @ generator_matrix #v = uG
         extra_bits %= 2 #mod 2 sum
-        _store_nth_word(extra_bits, information_words, i)
+        _store_nth_word(extra_bits, information_words, i, size=3, offset=4)
 
 
 
@@ -207,9 +207,9 @@ def encoder(information_words):
 def binary_symmetric_channel(bit_array, p):
     '''
     Description: This function simulates the transmission of the bits from 
-    'bit_array' through a binary symmetric channel. The original array is 
-    changed in such a way that each bit has a probability 'p' to change its
-    value. 
+    'bit_array' through a binary symmetric channel. A copy of the original array 
+    is changed in such a way that each bit has a probability 'p' to change its
+    value. The copy is returned.
 
     Input: bit_array --> numpy array with bits that will be transmitted through
                          the channel.
