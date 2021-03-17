@@ -32,6 +32,40 @@ def _validate_positive_integer(var, name):
     if var <= 0:
         raise ValueError("{} must be a positive int.".format(name))
 
+def _hamming_weight(word):
+    '''
+    Description: This function calculates the Hamming weight of the numpy array
+    'word'. 'word' contains only 0's and 1's. The Hamming weight is equal to
+    the number of 1's in the array.
+
+    Input: word --> numpy array with 1's and 0's.
+
+    Output: int --> The Hamming Weight of 'word'.
+
+    Time Complexity: O(n)
+
+    Space Complexity: O(1)
+    '''
+    return sum(word)
+
+def _hamming_distance(w1, w1):
+    '''
+    Description: This function calculates the Hamming distance between the numpy
+    array 'w1' and the numpy array 'w2'. The Hamming distance is equal to the 
+    number of positions that they differ. 'w1' and 'w2' must have the same length.
+
+    Input: w1, w2 --> numpy arrays of 0's and 1's with the same length.
+
+    Output: int --> Hamming distance between 'w1' and 'w2'.
+
+    Time Complexity: O(n)
+
+    Space Complexity: O(1)
+    '''
+    if (len(w1) != len(w2)):
+        raise ValueError("w1 and w2 must have the same length")
+
+    return _hamming_weight((w1 + w2) % 2)
 
 #Function definitions:
 
