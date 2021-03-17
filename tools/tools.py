@@ -48,7 +48,7 @@ def _hamming_weight(word):
     '''
     return sum(word)
 
-def _hamming_distance(w1, w1):
+def _hamming_distance(w1, w2):
     '''
     Description: This function calculates the Hamming distance between the numpy
     array 'w1' and the numpy array 'w2'. The Hamming distance is equal to the 
@@ -66,6 +66,57 @@ def _hamming_distance(w1, w1):
         raise ValueError("w1 and w2 must have the same length")
 
     return _hamming_weight((w1 + w2) % 2)
+
+def _get_nth_word(array, nth, word_size=4, extra_bits=3):
+    '''
+    Description: This function returns the slice that corresponds to the nth word
+    in the 'array'. The default is used for arrays of information words with 4 
+    information bits and 3 extra bits. To use this function with codewords, 
+    set extra_bits=0 and word_size=7.
+
+    Input: array --> An array with len(array)/(word_size + extra_bits) words.
+           nth --> The position of the selected word. Goes from 0 to len(array)/(word_size + extra_bits) - 1.
+    
+    Output: np.array --> The slice array[(word_size + extra_bits)*nth : (word_size + extra_bits)*nth + word_size]
+
+    Time Complexity: O(word_size)
+
+    Space Complexity: O(word_size)
+    '''
+    #Basic input checking:
+    if(len(array) % (word_size + extra_bits)):
+        raise ValueError("len(array) must be a multiple of word_size + extra_bits ({}).".format(word_size + extra_bits))
+
+    #Get the slice:
+    i0 = (word_size + extra_bits)*nth
+    return array[i0 : i0 + word_size]
+
+def _store_nth_word(bit_word, array, nth, size=3, offset=4):
+    '''
+    Description: This function copies the bits from 'bit_word' to the respective bits
+    of array, starting at index nth * (size + offset) + offset and finishing at 
+    nth * (size + offset) + offset + size - 1. 
+
+    Input: bit_word --> numpy array with 'size' bits.
+           array --> numpy array.
+           nth --> integer.
+           size --> len(bit_word) must be equal to size.
+           offset --> integer. 
+
+    Output: void
+
+    Time complexity: O(size)
+
+    Space Complexity: O(1)
+    '''
+    #Check if len(bit_word) != size:
+    if len(bit_word) != size:
+        raise ValueError("The size of 'bit_word' and 'size' must be equal.")
+
+    #Change array:
+    i0 = nth*(size + offset) + offset
+    for i in range(size):
+        array[i0 + i] = bit_word[i]
 
 #Function definitions:
 
@@ -93,29 +144,64 @@ def generate_words(n, k = 4, extra_bits = 3):
     #Check inputs:
     _validate_positive_integer(n, 'n')
     _validate_positive_integer(k, 'k')
-    _validate_positive_integer(extra_bits, 'extra_bits')
+    if not isinstance(extra_bits, int):
+        raise TypeError("{} must be an int.".format("extra_bits"))
+    if extra_bits < 0:
+        raise ValueError("extra_bits must be non-negative.")
 
     #Return the result:
     return np.array([random.randint(0, 1) for _ in range(n * (k + extra_bits))])
 
 def encoder(information_words):
     '''
-    Description: An encoder that transforms N information words with 4 bits each 
-    into codewords with 7 bits each (3 additional bits used for error correction). 
-    This encoder is based on Hamming code technique. 
+    Description: This function receives as input an np.array with 4 information
+    bits and 3 extra bits for each word. There are len(information_words)/7 words.
+    The function calculates the values of p1, p2, and p3 (the extra bits) to generate
+    the codewords (4 information bits + 3 extra bits) based on Hamming Code. Then,
+    it stores the values of p1, p2, and p3 in each corresponding extra bits for each
+    information word in the array 'information_words'.
 
-    Input: information_words --> numpy array with len(information_words)/4 
+    To generate each extra bit p1, p2, and p3, we do:
+                     p1 p2 p3
+    [b1 b2 b3 b4] @ [1  1  1] b1   =   [p1 p2 p3]
+                    [1  0  1] b2
+                    [1  1  1] b3
+                    [0  1  1] b4
+
+    Input: information_words --> numpy array with len(information_words)/7 
                                  information words (or len(information_words) bits). 
 
-    Output: codewords --> numpy array with 7*len(information_words)/4 bits (or
-                          len(information_words)/4 codewords).
+    Output: void
 
     Time Complexity: O(n)
 
     Space Complexity: O(1)
-
     '''
-    pass
+    #Validate the size of information_words:
+    length = len(information_words)
+    if (length == 0 or length % 7 != 0):
+        raise ValueError("The length of 'information_word' must be multiple of 7 and not 0.") 
+
+    #Create the generator matrix (G):
+    generator_matrix = np.array([
+        # p1 p2 p3
+        [ 1, 1, 1],#b1
+        [ 1, 0, 1],#b2
+        [ 1, 1, 0],#b3
+        [ 0, 1, 1] #b4
+        ])
+
+    #Create codewords array:
+    number_of_words = int(length/7)
+
+    #Encode each word from information_words and store it in codewords:
+    for i in range(number_of_words):
+        information_word = _get_nth_word(information_words, i)
+        extra_bits       = information_word @ generator_matrix #v = uG
+        extra_bits %= 2 #mod 2 sum
+        _store_nth_word(extra_bits, information_words, i)
+
+
 
 
 def binary_symmetric_channel(bit_array, p):
