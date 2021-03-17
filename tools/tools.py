@@ -213,15 +213,27 @@ def binary_symmetric_channel(bit_array, p):
 
     Input: bit_array --> numpy array with bits that will be transmitted through
                          the channel.
-           p --> parameter that gives the probability of changing each bit.
+           p --> parameter that gives the probability of changing each bit. Must be
+                 in the range [0, 1].
 
-    Output: void
+    Output: numpy array --> new array with some bits changed.
 
     Time Complexity: O(n)
 
-    Space Complexity: ------
+    Space Complexity: O(n)
     '''
-    pass
+    #Check the value of p:
+    if p < 0 or p > 1:
+        raise ValueError("p must be in the range [0, 1].")
+
+    new_bit_array = bit_array.copy()
+    if p != 0:
+        random_number_generator = random.SystemRandom()
+        for i in range(len(new_bit_array)):
+            if random_number_generator.random() <= p:
+                new_bit_array[i] = (new_bit_array[i] + 1) % 2
+
+    return new_bit_array
 
 
 def decoder(codewords):
