@@ -7,13 +7,12 @@ ALUNOS:
 Hamming Code Simulation
 '''
 
-#Import libs:
+# Import libs:
 import numpy as np
 import random
 
 
-#Auxiliary Functions:
-
+# Auxiliary Functions:
 def _validate_positive_integer(var, name):
     '''
     Description: This function checks if 'var' is a positive int. If it is not,
@@ -32,6 +31,7 @@ def _validate_positive_integer(var, name):
     if var <= 0:
         raise ValueError("{} must be a positive int.".format(name))
 
+
 def _hamming_weight(word):
     '''
     Description: This function calculates the Hamming weight of the numpy array
@@ -47,6 +47,7 @@ def _hamming_weight(word):
     Space Complexity: O(1)
     '''
     return sum(word)
+
 
 def _hamming_distance(w1, w2):
     '''
@@ -67,6 +68,7 @@ def _hamming_distance(w1, w2):
 
     return _hamming_weight((w1 + w2) % 2)
 
+
 def _get_nth_word(array, nth, word_size=4, extra_bits=3):
     '''
     Description: This function returns the slice that corresponds to the nth word
@@ -76,20 +78,22 @@ def _get_nth_word(array, nth, word_size=4, extra_bits=3):
 
     Input: array --> An array with len(array)/(word_size + extra_bits) words.
            nth --> The position of the selected word. Goes from 0 to len(array)/(word_size + extra_bits) - 1.
-    
+
     Output: np.array --> The slice array[(word_size + extra_bits)*nth : (word_size + extra_bits)*nth + word_size]
 
     Time Complexity: O(word_size)
 
     Space Complexity: O(word_size)
     '''
-    #Basic input checking:
+    # Basic input checking:
     if(len(array) % (word_size + extra_bits)):
-        raise ValueError("len(array) must be a multiple of word_size + extra_bits ({}).".format(word_size + extra_bits))
+        raise ValueError(
+            "len(array) must be a multiple of word_size + extra_bits ({}).".format(word_size + extra_bits))
 
-    #Get the slice:
+    # Get the slice:
     i0 = (word_size + extra_bits)*nth
-    return array[i0 : i0 + word_size]
+    return array[i0: i0 + word_size]
+
 
 def _store_nth_word(bit_word, array, nth, size=4, offset=0):
     '''
@@ -109,18 +113,19 @@ def _store_nth_word(bit_word, array, nth, size=4, offset=0):
 
     Space Complexity: O(1)
     '''
-    #Check if len(bit_word) != size:
+    # Check if len(bit_word) != size:
     if len(bit_word) != size:
         raise ValueError("The size of 'bit_word' and 'size' must be equal.")
 
-    #Change array:
+    # Change array:
     i0 = nth*(size + offset) + offset
     for i in range(size):
         array[i0 + i] = bit_word[i]
 
-#Function definitions:
+# Function definitions:
 
-def generate_words(n, k = 4, extra_bits = 3):
+
+def generate_words(n, k=4, extra_bits=3):
     '''
     Description: This function randomly generates n information words with 
     k + extra_bits bits each. The extra bits are not information bits,
@@ -141,7 +146,7 @@ def generate_words(n, k = 4, extra_bits = 3):
 
     Space Complexity: O(n*(k + extra_bits))
     '''
-    #Check inputs:
+    # Check inputs:
     _validate_positive_integer(n, 'n')
     _validate_positive_integer(k, 'k')
     if not isinstance(extra_bits, int):
@@ -149,8 +154,9 @@ def generate_words(n, k = 4, extra_bits = 3):
     if extra_bits < 0:
         raise ValueError("extra_bits must be non-negative.")
 
-    #Return the result:
+    # Return the result:
     return np.array([random.randint(0, 1) for _ in range(n * (k + extra_bits))])
+
 
 def encoder(information_words):
     '''
@@ -177,31 +183,30 @@ def encoder(information_words):
 
     Space Complexity: O(1)
     '''
-    #Validate the size of information_words:
+    # Validate the size of information_words:
     length = len(information_words)
     if (length == 0 or length % 7 != 0):
-        raise ValueError("The length of 'information_word' must be multiple of 7 and not 0.") 
+        raise ValueError(
+            "The length of 'information_word' must be multiple of 7 and not 0.")
 
-    #Create the generator matrix (G):
+    # Create the generator matrix (G):
     generator_matrix = np.array([
         # p1 p2 p3
-        [ 1, 1, 1],#b1
-        [ 1, 0, 1],#b2
-        [ 1, 1, 0],#b3
-        [ 0, 1, 1] #b4
-        ])
+        [1, 1, 1],  # b1
+        [1, 0, 1],  # b2
+        [1, 1, 0],  # b3
+        [0, 1, 1]  # b4
+    ])
 
-    #Create codewords array:
+    # Create codewords array:
     number_of_words = int(length/7)
 
-    #Encode each word from information_words and store it in codewords:
+    # Encode each word from information_words and store it in codewords:
     for i in range(number_of_words):
         information_word = _get_nth_word(information_words, i)
-        extra_bits       = information_word @ generator_matrix #v = uG
-        extra_bits %= 2 #mod 2 sum
+        extra_bits = information_word @ generator_matrix  # v = uG
+        extra_bits %= 2  # mod 2 sum
         _store_nth_word(extra_bits, information_words, i, size=3, offset=4)
-
-
 
 
 def binary_symmetric_channel(bit_array, p):
@@ -222,7 +227,7 @@ def binary_symmetric_channel(bit_array, p):
 
     Space Complexity: O(n)
     '''
-    #Check the value of p:
+    # Check the value of p:
     if p < 0 or p > 1:
         raise ValueError("p must be in the range [0, 1].")
 
@@ -269,4 +274,10 @@ def comparator(array1, array2):
 
     Space Complexity: O(1)
     '''
-    pass
+    if (len(array1) != len(array2)):
+        raise ValueError("The arrays must have the same length")
+    total = 0
+    for i in range(len(array1)):
+        if array1[i] != array2[i]:
+            total += 1
+    return total/len(array1)
