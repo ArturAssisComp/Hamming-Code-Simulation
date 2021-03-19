@@ -67,7 +67,7 @@ def _hamming_distance(w1, w2):
 
     return _hamming_weight((w1 + w2) % 2)
 
-def _get_nth_word(array, nth, word_size=4, extra_bits=3):
+def _get_nth_word(array, nth, word_size=4, extra_bits=0):
     '''
     Description: This function returns the slice that corresponds to the nth word
     in the 'array'. The default is used for arrays of information words with 4 
@@ -118,6 +118,56 @@ def _store_nth_word(bit_word, array, nth, size=4, offset=0):
     for i in range(size):
         array[i0 + i] = bit_word[i]
 
+def _get_information_words(codewords, word_size=4, extra_bits=3):
+    '''
+    Description: Get information words from codewords (with 'extra_bits').
+    A new numpy array with size word_size * len(codewords)/(word_size + extra_bits) 
+    is created and returned.
+
+    Input: codewords --> numpy array.
+           word_size --> size of information bits.
+           extra_bits --> bits used for encoding.
+
+    Output: numpy array
+
+    Time complexity: O(n)
+
+    Space Complexity: O(n)
+    '''
+    if (len(codewords) % (word_size + extra_bits) != 0):
+        raise ValueError("len(codewords) must be multiple of word_size + extra_bits")
+
+    
+
+    #Initialize loop variables:
+    bits_to_read = int(word_size*len(codewords)/(word_size + extra_bits))
+    i1 = 0 #Index of information_words
+    i2 = 0 #Index of codewords 
+
+    #Initialize information words:
+    information_words = np.empty((1, bits_to_read), dtype=int)[0]
+    
+    #Compare bits:
+    while(bits_to_read > 0):
+        word_bits_remaining = word_size
+        while(word_bits_remaining > 0):
+            #Copy the information:
+            information_words[i1] = int(codewords[i2])
+            
+            #Update loop variables:
+            i1 += 1
+            i2 += 1
+            word_bits_remaining -= 1
+
+        #Update bits to compare:
+        bits_to_read -= 4
+
+        #Ignore extra bits form codewords:
+        i2 += extra_bits
+
+    return information_words
+
+
 #Function definitions:
 
 def generate_words(n, k = 4, extra_bits = 3):
@@ -151,6 +201,29 @@ def generate_words(n, k = 4, extra_bits = 3):
 
     #Return the result:
     return np.array([random.randint(0, 1) for _ in range(n * (k + extra_bits))])
+
+def generate_information_and_codewords(num_of_words):
+    '''
+    Description: Returns a tuple with two arrays. The first is the information words
+    array and the second is the codewords array. They are encoded using Hamming code.
+    The information array has 'num_of_words'*4 bits and the codewords array has
+    'num_of_words'*7 bits (4 information bits and 3 extra bits used for encoding the
+    message). Each information bit is randomly generated.
+
+    Input: num_of_words --> number of 4 information bits word that will be generated.
+
+    Output tuple --> (information_words, codewords)
+
+    Time Complexity: O(n)
+
+    Space Complexity: O(n)
+    '''
+    codewords = generate_words(num_of_words)
+    encoder(codewords)
+    information_words = _get_information_words(codewords)
+    return (information_words, codewords)
+
+
 
 def encoder(information_words):
     '''
@@ -196,7 +269,7 @@ def encoder(information_words):
 
     #Encode each word from information_words and store it in codewords:
     for i in range(number_of_words):
-        information_word = _get_nth_word(information_words, i)
+        information_word = _get_nth_word(information_words, i, 4, 3)
         extra_bits       = information_word @ generator_matrix #v = uG
         extra_bits %= 2 #mod 2 sum
         _store_nth_word(extra_bits, information_words, i, size=3, offset=4)
@@ -250,23 +323,75 @@ def decoder(codewords):
 
     Space Complexity: O(?)
     '''
-    pass
+    # Validate the size of the array received:
+    length = len(codewords)
+    if (length == 0 or length % 7 != 0):
+        raise ValueError(
+            "The length of the array must be multiple of 7 and canoot be zero.")
 
+    # Gets syndrome:
+    # H matrix transpose:
+    Ht = np.array([
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
+    number_of_words = int(length/7)
+
+    result = np.empty((1, number_of_words * 4))[0] #Create the array
+
+    # Decode each group of seven bits:
+    for i in range(number_of_words):
+        word = _get_nth_word(codewords, i, 7, 0)
+        syndrome = (word @ Ht) % 2
+        error = get_minimum_error(syndrome)
+        trasmitted = (word + error) % 2
+        _store_nth_word(trasmitted[0:4], result, i)
+        #result = np.concatenate((result, trasmitted[0:4]), axis=None)
+    return result
 
 def comparator(array1, array2):
     '''
     Description: This function compares 'array1' with array2'. It returns the
     ratio between the number of different corresponding elements and the total 
     number of elements. len(array1) must be equal len(array2).
-
     Input: array1 --> first numpy array.
            array2 --> second numpy array.
-
     Output: float --> ration between the number of different corresponding 
                       elements and the total number of elements.
-
     Time Complexity: O(n)
-
     Space Complexity: O(1)
     '''
-    pass
+    if (len(array1) != len(array2)):
+        raise ValueError("The arrays must have the same length")
+    total = 0
+    for i in range(len(array1)):
+        if array1[i] != array2[i]:
+            total += 1
+    return total/float(len(array1))
+
+def get_minimum_error(syndrome):
+    '''
+    Description: This function returns the error that has the
+    least Hamming weight for a syndrome.
+    Input: syndrome --> numpy array (size = 3).
+    Output: error --> numpy array (size = 7)
+    '''
+
+    if len(syndrome) != 3:
+        raise ValueError("Syndrome must have length 3")
+
+    errors = np.array([[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1],
+                       [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0, 0],
+                       [0, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 0, 0, 0],
+                       [0, 0, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0]])
+
+    binary_value = 4*syndrome[0] + 2*syndrome[1] + syndrome[2]
+
+    return errors[binary_value]
+
+
