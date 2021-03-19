@@ -7,13 +7,12 @@ ALUNOS:
 Hamming Code Simulation
 '''
 
-#Import libs:
+# Import libs:
 import numpy as np
 import random
 
 
-#Auxiliary Functions:
-
+# Auxiliary Functions:
 def _validate_positive_integer(var, name):
     '''
     Description: This function checks if 'var' is a positive int. If it is not,
@@ -32,6 +31,7 @@ def _validate_positive_integer(var, name):
     if var <= 0:
         raise ValueError("{} must be a positive int.".format(name))
 
+
 def _hamming_weight(word):
     '''
     Description: This function calculates the Hamming weight of the numpy array
@@ -47,6 +47,7 @@ def _hamming_weight(word):
     Space Complexity: O(1)
     '''
     return sum(word)
+
 
 def _hamming_distance(w1, w2):
     '''
@@ -67,6 +68,7 @@ def _hamming_distance(w1, w2):
 
     return _hamming_weight((w1 + w2) % 2)
 
+
 def _get_nth_word(array, nth, word_size=4, extra_bits=0):
     '''
     Description: This function returns the slice that corresponds to the nth word
@@ -76,20 +78,22 @@ def _get_nth_word(array, nth, word_size=4, extra_bits=0):
 
     Input: array --> An array with len(array)/(word_size + extra_bits) words.
            nth --> The position of the selected word. Goes from 0 to len(array)/(word_size + extra_bits) - 1.
-    
+
     Output: np.array --> The slice array[(word_size + extra_bits)*nth : (word_size + extra_bits)*nth + word_size]
 
     Time Complexity: O(word_size)
 
     Space Complexity: O(word_size)
     '''
-    #Basic input checking:
+    # Basic input checking:
     if(len(array) % (word_size + extra_bits)):
-        raise ValueError("len(array) must be a multiple of word_size + extra_bits ({}).".format(word_size + extra_bits))
+        raise ValueError(
+            "len(array) must be a multiple of word_size + extra_bits ({}).".format(word_size + extra_bits))
 
-    #Get the slice:
+    # Get the slice:
     i0 = (word_size + extra_bits)*nth
-    return array[i0 : i0 + word_size]
+    return array[i0: i0 + word_size]
+
 
 def _store_nth_word(bit_word, array, nth, size=4, offset=0):
     '''
@@ -109,14 +113,15 @@ def _store_nth_word(bit_word, array, nth, size=4, offset=0):
 
     Space Complexity: O(1)
     '''
-    #Check if len(bit_word) != size:
+    # Check if len(bit_word) != size:
     if len(bit_word) != size:
         raise ValueError("The size of 'bit_word' and 'size' must be equal.")
 
-    #Change array:
+    # Change array:
     i0 = nth*(size + offset) + offset
     for i in range(size):
         array[i0 + i] = bit_word[i]
+
 
 def _get_information_words(codewords, word_size=4, extra_bits=3):
     '''
@@ -170,7 +175,8 @@ def _get_information_words(codewords, word_size=4, extra_bits=3):
 
 #Function definitions:
 
-def generate_words(n, k = 4, extra_bits = 3):
+
+def generate_words(n, k=4, extra_bits=0):
     '''
     Description: This function randomly generates n information words with 
     k + extra_bits bits each. The extra bits are not information bits,
@@ -191,7 +197,7 @@ def generate_words(n, k = 4, extra_bits = 3):
 
     Space Complexity: O(n*(k + extra_bits))
     '''
-    #Check inputs:
+    # Check inputs:
     _validate_positive_integer(n, 'n')
     _validate_positive_integer(k, 'k')
     if not isinstance(extra_bits, int):
@@ -199,8 +205,9 @@ def generate_words(n, k = 4, extra_bits = 3):
     if extra_bits < 0:
         raise ValueError("extra_bits must be non-negative.")
 
-    #Return the result:
+    # Return the result:
     return np.array([random.randint(0, 1) for _ in range(n * (k + extra_bits))])
+
 
 def generate_information_and_codewords(num_of_words):
     '''
@@ -224,38 +231,35 @@ def generate_information_and_codewords(num_of_words):
     return (information_words, codewords)
 
 
-
 def encoder(information_words):
     '''
     Description: This function receives as input an np.array with 4 information
-    bits and 3 extra bits for each word. There are len(information_words)/7 words.
+    bits for each word. There are len(information_words)/4 words.
     The function calculates the values of p1, p2, and p3 (the extra bits) to generate
     the codewords (4 information bits + 3 extra bits) based on Hamming Code. Then,
-    it stores the values of p1, p2, and p3 in each corresponding extra bits for each
-    information word in the array 'information_words'.
+    it returns an array with the codewords.
 
-    To generate each extra bit p1, p2, and p3, we do:
-                     p1 p2 p3
-    [b1 b2 b3 b4] @ [1  1  1] b1   =   [p1 p2 p3]
-                    [1  0  1] b2
-                    [1  1  1] b3
-                    [0  1  1] b4
+    To generate each code word::
+                     b1 b2 b3 b4 p1 p2 p3
+    [b1 b2 b3 b4] @ [1  0  0  0  1  1  1]  =  [b1 b2 b3 b4 p1 p2 p3]
+                    [0  1  0  0  1  0  1] 
+                    [0  0  1  0  1  1  0] 
+                    [0  0  0  1  0  1  1] 
 
-    Input: information_words --> numpy array with len(information_words)/7 
+    Input: information_words --> numpy array with len(information_words)/4
                                  information words (or len(information_words) bits). 
 
-    Output: void
+    Output: code_words -> numpy array with codewords (length 7)
 
     Time Complexity: O(n)
-
-    Space Complexity: O(1)
     '''
-    #Validate the size of information_words:
+    # Validate the size of information_words:
     length = len(information_words)
-    if (length == 0 or length % 7 != 0):
-        raise ValueError("The length of 'information_word' must be multiple of 7 and not 0.") 
+    if (length == 0 or length % 4 != 0):
+        raise ValueError(
+            "The length of 'information_word' must be multiple of 4 and not 0.")
 
-    #Create the generator matrix (G):
+    # Create the generator matrix (G):
     generator_matrix = np.array([
         # p1 p2 p3
         [ 1, 1, 1],#b1
@@ -274,7 +278,17 @@ def encoder(information_words):
         extra_bits %= 2 #mod 2 sum
         _store_nth_word(extra_bits, information_words, i, size=3, offset=4)
 
+    number_of_words = int(length/4)
+    # Create codewords array:
+    code_words = np.full(0, 0, np.int)
 
+    # Encode each word from information_words and store it in codewords:
+    for i in range(number_of_words):
+        information_word = _get_nth_word(information_words, i, 4, 0)
+        v = information_word @ generator_matrix  # v = uG
+        v %= 2  # mod 2 sum
+        code_words = np.concatenate((code_words, v), axis=None)
+    return code_words
 
 
 def binary_symmetric_channel(bit_array, p):
@@ -295,7 +309,7 @@ def binary_symmetric_channel(bit_array, p):
 
     Space Complexity: O(n)
     '''
-    #Check the value of p:
+    # Check the value of p:
     if p < 0 or p > 1:
         raise ValueError("p must be in the range [0, 1].")
 
@@ -309,19 +323,19 @@ def binary_symmetric_channel(bit_array, p):
     return new_bit_array
 
 
-def decoder(codewords):
+def decoder(received_words):
     '''
-    Description: An decoder that transforms N  codewords with 7 bits each 
-    into information words with 4 bits each. This decoder is based on Hamming 
-    code technique. 
+    Description: An decoder that transforms N received_words with 7 bits each 
+    into (suposed) information words with 4 bits each. This decoder is based on 
+    Hamming code technique. 
 
-    Input: codewords --> numpy array with N codewords (7 * N bits).
+    Input: received_words --> numpy array with N words (7 * N bits).
 
-    Output: numpy array --> numpy array with N information words (4 * N bits).
+    Output: numpy array --> numpy array with N suposed transmitted words (4 * N bits).
 
-    Time Complexity: O(?)
+    Time Complexity: O(n)
 
-    Space Complexity: O(?)
+    Space Complexity: O(n)
     '''
     # Validate the size of the array received:
     length = len(codewords)
@@ -341,6 +355,7 @@ def decoder(codewords):
         [0, 0, 1]
     ])
     number_of_words = int(length/7)
+
 
     result = np.empty((1, number_of_words * 4))[0] #Create the array
 
@@ -379,6 +394,7 @@ def get_minimum_error(syndrome):
     Description: This function returns the error that has the
     least Hamming weight for a syndrome.
     Input: syndrome --> numpy array (size = 3).
+
     Output: error --> numpy array (size = 7)
     '''
 
@@ -393,5 +409,4 @@ def get_minimum_error(syndrome):
     binary_value = 4*syndrome[0] + 2*syndrome[1] + syndrome[2]
 
     return errors[binary_value]
-
 
