@@ -125,7 +125,7 @@ def _store_nth_word(bit_word, array, nth, size=4, offset=0):
 # Function definitions:
 
 
-def generate_words(n, k=4, extra_bits=3):
+def generate_words(n, k=4, extra_bits=0):
     '''
     Description: This function randomly generates n information words with 
     k + extra_bits bits each. The extra bits are not information bits,
@@ -161,52 +161,50 @@ def generate_words(n, k=4, extra_bits=3):
 def encoder(information_words):
     '''
     Description: This function receives as input an np.array with 4 information
-    bits and 3 extra bits for each word. There are len(information_words)/7 words.
+    bits for each word. There are len(information_words)/4 words.
     The function calculates the values of p1, p2, and p3 (the extra bits) to generate
     the codewords (4 information bits + 3 extra bits) based on Hamming Code. Then,
-    it stores the values of p1, p2, and p3 in each corresponding extra bits for each
-    information word in the array 'information_words'.
+    it returns an array with the codewords.
 
-    To generate each extra bit p1, p2, and p3, we do:
-                     p1 p2 p3
-    [b1 b2 b3 b4] @ [1  1  1] b1   =   [p1 p2 p3]
-                    [1  0  1] b2
-                    [1  1  1] b3
-                    [0  1  1] b4
+    To generate each code word::
+                     b1 b2 b3 b4 p1 p2 p3
+    [b1 b2 b3 b4] @ [1  0  0  0  1  1  1]  =  [b1 b2 b3 b4 p1 p2 p3]
+                    [0  1  0  0  1  0  1] 
+                    [0  0  1  0  1  1  0] 
+                    [0  0  0  1  0  1  1] 
 
-    Input: information_words --> numpy array with len(information_words)/7 
+    Input: information_words --> numpy array with len(information_words)/4
                                  information words (or len(information_words) bits). 
 
-    Output: void
+    Output: code_words -> numpy array with codewords (length 7)
 
     Time Complexity: O(n)
-
-    Space Complexity: O(1)
     '''
     # Validate the size of information_words:
     length = len(information_words)
-    if (length == 0 or length % 7 != 0):
+    if (length == 0 or length % 4 != 0):
         raise ValueError(
-            "The length of 'information_word' must be multiple of 7 and not 0.")
+            "The length of 'information_word' must be multiple of 4 and not 0.")
 
     # Create the generator matrix (G):
     generator_matrix = np.array([
-        # p1 p2 p3
-        [1, 1, 1],  # b1
-        [1, 0, 1],  # b2
-        [1, 1, 0],  # b3
-        [0, 1, 1]  # b4
+        [1, 0, 0, 0, 1, 1, 1],
+        [0, 1, 0, 0, 1, 0, 1],
+        [0, 0, 1, 0, 1, 1, 0],
+        [0, 0, 0, 1, 0, 1, 1]
     ])
 
+    number_of_words = int(length/4)
     # Create codewords array:
-    number_of_words = int(length/7)
+    code_words = np.full(0, 0, np.int)
 
     # Encode each word from information_words and store it in codewords:
     for i in range(number_of_words):
-        information_word = _get_nth_word(information_words, i)
-        extra_bits = information_word @ generator_matrix  # v = uG
-        extra_bits %= 2  # mod 2 sum
-        _store_nth_word(extra_bits, information_words, i, size=3, offset=4)
+        information_word = _get_nth_word(information_words, i, 4, 0)
+        v = information_word @ generator_matrix  # v = uG
+        v %= 2  # mod 2 sum
+        code_words = np.concatenate((code_words, v), axis=None)
+    return code_words
 
 
 def binary_symmetric_channel(bit_array, p):
@@ -241,22 +239,22 @@ def binary_symmetric_channel(bit_array, p):
     return new_bit_array
 
 
-def decoder(codewords):
+def decoder(received_words):
     '''
-    Description: An decoder that transforms N  codewords with 7 bits each 
-    into information words with 4 bits each. This decoder is based on Hamming 
-    code technique. 
+    Description: An decoder that transforms N received_words with 7 bits each 
+    into (suposed) information words with 4 bits each. This decoder is based on 
+    Hamming code technique. 
 
-    Input: codewords --> numpy array with N codewords (7 * N bits).
+    Input: received_words --> numpy array with N words (7 * N bits).
 
-    Output: numpy array --> numpy array with N information words (4 * N bits).
+    Output: numpy array --> numpy array with N suposed transmitted words (4 * N bits).
 
-    Time Complexity: O(?)
+    Time Complexity: O(n)
 
-    Space Complexity: O(?)
+    Space Complexity: O(n)
     '''
     # Validate the size of the array received:
-    length = len(codewords)
+    length = len(received_words)
     if (length == 0 or length % 7 != 0):
         raise ValueError(
             "The length of the array must be multiple of 7 and canoot be zero.")
@@ -278,11 +276,11 @@ def decoder(codewords):
 
     # Decode each group of seven bits:
     for i in range(number_of_words):
-        word = _get_nth_word(codewords, i, 7, 0)
-        syndrome = word @ Ht
+        word = _get_nth_word(received_words, i, 7, 0)
+        syndrome = (word @ Ht) % 2
         error = get_minimum_error(syndrome)
-        received = (word + error) % 2
-        result = np.concatenate((result, received[0:4]), axis=None)
+        trasmitted = (word + error) % 2
+        result = np.concatenate((result, trasmitted[0:4]), axis=None)
     return result
 
 
@@ -308,7 +306,7 @@ def comparator(array1, array2):
     for i in range(len(array1)):
         if array1[i] != array2[i]:
             total += 1
-    return total/len(array1)
+    return total/float(len(array1))
 
 
 def get_minimum_error(syndrome):
@@ -319,18 +317,16 @@ def get_minimum_error(syndrome):
     Input: syndrome --> numpy array (size = 3).
 
     Output: error --> numpy array (size = 7)
-
-    Time Complexity: O(1)
     '''
 
     if len(syndrome) != 3:
         raise ValueError("Syndrome must have length 3")
 
-    errors = np.array([[1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0],
-              [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0],
-              [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0],
-              [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0]])
+    errors = np.array([[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1],
+                       [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0, 0],
+                       [0, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 0, 0, 0],
+                       [0, 0, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0]])
 
-    binary_value = 4*syndrome[2] + 2*syndrome[1] + syndrome[0]
+    binary_value = 4*syndrome[0] + 2*syndrome[1] + syndrome[2]
 
     return errors[binary_value]
