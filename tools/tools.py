@@ -255,7 +255,35 @@ def decoder(codewords):
 
     Space Complexity: O(?)
     '''
-    pass
+    # Validate the size of the array received:
+    length = len(codewords)
+    if (length == 0 or length % 7 != 0):
+        raise ValueError(
+            "The length of the array must be multiple of 7 and canoot be zero.")
+
+    # Gets syndrome:
+    # H matrix transpose:
+    Ht = np.array([
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
+    number_of_words = int(length/7)
+
+    result = np.full(0, 0, np.int)
+
+    # Decode each group of seven bits:
+    for i in range(number_of_words):
+        word = _get_nth_word(codewords, i, 7, 0)
+        syndrome = word @ Ht
+        error = get_minimum_error(syndrome)
+        received = (word + error) % 2
+        result = np.concatenate((result, received[0:4]), axis=None)
+    return result
 
 
 def comparator(array1, array2):
@@ -281,3 +309,28 @@ def comparator(array1, array2):
         if array1[i] != array2[i]:
             total += 1
     return total/len(array1)
+
+
+def get_minimum_error(syndrome):
+    '''
+    Description: This function returns the error that has the
+    least Hamming weight for a syndrome.
+
+    Input: syndrome --> numpy array (size = 3).
+
+    Output: error --> numpy array (size = 7)
+
+    Time Complexity: O(1)
+    '''
+
+    if len(syndrome) != 3:
+        raise ValueError("Syndrome must have length 3")
+
+    errors = np.array([[1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0],
+              [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0],
+              [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0],
+              [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0]])
+
+    binary_value = 4*syndrome[2] + 2*syndrome[1] + syndrome[0]
+
+    return errors[binary_value]
