@@ -160,7 +160,7 @@ def _get_information_words(codewords, word_size=4, extra_bits=3):
             word_bits_remaining -= 1
 
         #Update bits to compare:
-        bits_to_read -= 4
+        bits_to_read -= word_size
 
         #Ignore extra bits form codewords:
         i2 += extra_bits
@@ -168,7 +168,7 @@ def _get_information_words(codewords, word_size=4, extra_bits=3):
     return information_words
 
 
-#Function definitions:
+#Function definitions (Hamming Code):
 
 def generate_words(n, k = 4, extra_bits = 3):
     '''
@@ -394,4 +394,86 @@ def get_minimum_error(syndrome):
 
     return errors[binary_value]
 
+
+#Function definitions (Custom Code):
+def generate_information_and_codewords_custom(num_of_words):
+    '''
+    Description: Returns a tuple with two arrays. The first is the information words
+    array and the second is the codewords array. They are encoded using Custom code
+    created by students.
+    The information array has 'num_of_words'*8 bits and the codewords array has
+    'num_of_words'*14 bits (8 information bits and 6 extra bits used for encoding the
+    message). Each information bit is randomly generated.
+
+    Input: num_of_words --> number of 8 information bits word that will be generated.
+
+    Output tuple --> (information_words, codewords)
+
+    Time Complexity: O(n)
+
+    Space Complexity: O(n)
+    '''
+    codewords = generate_words(num_of_words, k=8, extra_bits=6)
+    custom_encoder(codewords)
+    information_words = _get_information_words(codewords, word_size=8, extra_bits=6)
+    return (information_words, codewords)
+
+
+
+def custom_encoder(information_words):
+    '''
+    Description: This function receives as input an np.array with 8 information
+    bits and 6 extra bits for each word. There are len(information_words)/14 words.
+    The function calculates the values of p1, p2, p3, p4, p5, and p6 (the extra bits) to generate
+    the codewords (8 information bits + 6 extra bits) based on Custom Code. Then,
+    it stores the values of p1, p2, p3, p4, p5, and p6 in each corresponding extra bits for each
+    information word in the array 'information_words'.
+
+    To generate each extra bit p1, p2, and p3, we do:
+                     p1 p2 p3
+    [b1 b2 b3 b4 b5 b6 b7 b8] @ [1  1  1  0  0  0] b1   =   [p1 p2 p3 p4 p5 p6]
+                                [1  1  0  1  0  0] b2
+                                [1  0  1  0  1  0] b3
+                                [0  1  1  0  0  1] b4
+                                [0  0  0  1  1  1] b5
+                                [1  0  0  1  1  0] b6
+                                [0  1  0  1  0  1] b7
+                                [0  0  1  0  1  1] b8
+
+    Input: information_words --> numpy array with len(information_words)/7 
+                                 information words (or len(information_words) bits). 
+
+    Output: void
+
+    Time Complexity: O(n)
+
+    Space Complexity: O(1)
+    '''
+    #Validate the size of information_words:
+    length = len(information_words)
+    if (length == 0 or length % 14 != 0):
+        raise ValueError("The length of 'information_word' must be multiple of 14 and not 0.") 
+
+    #Create the generator matrix (G):
+    generator_matrix = np.array([
+        # p1 p2 p3 p4 p5 p6
+        [ 1, 1, 1, 0, 0, 0], #b1
+        [ 1, 1, 0, 1, 0, 0], #b2
+        [ 1, 0, 1, 0, 1, 0], #b3
+        [ 0, 1, 1, 0, 0, 1], #b4
+        [ 0, 0, 0, 1, 1, 1], #b5
+        [ 1, 0, 0, 1, 1, 0], #b6
+        [ 0, 1, 0, 1, 0, 1], #b7
+        [ 0, 0, 1, 0, 1, 1]  #b8
+        ])
+
+    #Create codewords array:
+    number_of_words = int(length/14)
+
+    #Encode each word from information_words and store it in codewords:
+    for i in range(number_of_words):
+        information_word = _get_nth_word(information_words, i, 8, 6)
+        extra_bits       = information_word @ generator_matrix #v = uG
+        extra_bits %= 2 #mod 2 sum
+        _store_nth_word(extra_bits, information_words, i, size=6, offset=8)
 
