@@ -477,3 +477,76 @@ def custom_encoder(information_words):
         extra_bits %= 2 #mod 2 sum
         _store_nth_word(extra_bits, information_words, i, size=6, offset=8)
 
+
+
+def custom_decoder(codewords, min_error_dict):
+    '''
+    Description: An decoder that transforms N  codewords with 14 bits each 
+    into information words with 8 bits each. This decoder is based on Custom 
+    code technique invented by the students. 
+
+    Input: codewords --> numpy array with N codewords (14 * N bits).
+
+    Output: numpy array --> numpy array with N information words (8 * N bits).
+
+    Time Complexity: O(?)
+
+    Space Complexity: O(?)
+    '''
+    # Validate the size of the array received:
+    length = len(codewords)
+    if (length == 0 or length % 14 != 0):
+        raise ValueError(
+            "The length of the array must be multiple of 14 and canoot be zero.")
+
+    # Gets syndrome:
+    # H matrix transpose:
+    Ht = np.array([
+        #s1 s2 s3 s4 s5 s6
+        [1, 1, 1, 0, 0, 0], #b1
+        [1, 1, 0, 1, 0, 0], #b2
+        [1, 0, 1, 0, 1, 0], #b3
+        [0, 1, 1, 0, 0, 1], #b4
+        [0, 0, 0, 1, 1, 1], #b5
+        [1, 0, 0, 1, 1, 0], #b6
+        [0, 1, 0, 1, 0, 1], #b7
+        [0, 0, 1, 0, 1, 1], #b8
+        [1, 0, 0, 0, 0, 0], #p1
+        [0, 1, 0, 0, 0, 0], #p2
+        [0, 0, 1, 0, 0, 0], #p3
+        [0, 0, 0, 1, 0, 0], #p4
+        [0, 0, 0, 0, 1, 0], #p5
+        [0, 0, 0, 0, 0, 1]  #p6
+    ])
+    number_of_words = int(length/14)
+
+    result = np.empty((1, number_of_words * 8))[0] #Create the array
+
+    # Decode each group of seven bits:
+    for i in range(number_of_words):
+        word = _get_nth_word(codewords, i, 14, 0)
+        syndrome = (word @ Ht) % 2
+        error = get_minimum_error_custom(syndrome, min_error_dict)
+        trasmitted = (word + error) % 2
+        _store_nth_word(trasmitted[0:8], result, i, size=8)
+    return result
+
+
+def get_minimum_error_custom(syndrome, min_error_dict):
+    '''
+    Description: This function returns the error that has the
+    least Hamming weight for a syndrome.
+    Input: syndrome --> numpy array (size = 6).
+           min_error_dict --> dict with key==[binary number
+                              related to the syndrom] and
+                              value == [minimum weight error
+                              associated with the syndrom]
+    Output: error --> numpy array (size = 14)
+    '''
+
+    if len(syndrome) != 6:
+        raise ValueError("Syndrome must have length 6")
+
+    binary_value = 32*syndrome[0] + 16*syndrome[1] + 8*syndrome[2] + 4*syndrome[3] + 2*syndrome[4] + syndrome[5] 
+
+    return min_error_dict[binary_value]
